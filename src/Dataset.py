@@ -1,7 +1,9 @@
 import os
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from sklearn.metrics import mean_squared_error
+
 
 # 数量で重み付け
 def ma_weighted(price, df):
@@ -13,22 +15,22 @@ def ma_weighted(price, df):
         ma_w = 数量加重移動平均
     """
 
-    df_price = df.loc[price.index, '価格']
-    df_num = df.loc[price.index, '数量']
-    
+    df_price = df.loc[price.index, "価格"]
+    df_num = df.loc[price.index, "数量"]
+
     ma_w = 0
     for p, n in zip(df_price, df_num):
-        ma_w += n * p/df_num.sum()
+        ma_w += n * p / df_num.sum()
 
     return ma_w
 
 
-
-class Datasets:
+class Dataset:
     """
     データセットの成形，train，test，データの作成
     """
-    def __init__(self, file_path, roll_days=5):
+
+    def __init__(self, file_path, roll_days=5, start_test_idx=9426):
         """
         Args:
             file_path (str): データファイルのパス
@@ -36,10 +38,13 @@ class Datasets:
         """
         self.file_path = file_path
         self.roll_days = roll_days
+        self.start_test_idx = start_test_idx
 
         self.df = self.preprocess()
 
-        self.ma_w5 = self.ma_df()
+        self.ma_w = self.ma_df()
+
+        self.train_df, self.test_df = self.make_train_test()
 
     def preprocess(self):
         df_raw = pd.read_csv(self.file_path)
@@ -56,8 +61,14 @@ class Datasets:
 
         # 日にちの処理
         # timestamp型 → timedelta
-        date = [str(df["年"].iloc[i])+"-"+str(df["月"].iloc[i])+"-" +
-                str(df["日"].iloc[i]) for i in range(df.shape[0])]
+        date = [
+            str(df["年"].iloc[i])
+            + "-"
+            + str(df["月"].iloc[i])
+            + "-"
+            + str(df["日"].iloc[i])
+            for i in range(df.shape[0])
+        ]
         df["date"] = pd.to_datetime(date)
         # df = df.drop(date_columns, axis=1).copy()
         df["days"] = [(date - df["date"][0]).days for date in df["date"]]
@@ -66,8 +77,11 @@ class Datasets:
         return df
 
     def ma_df(self):
-        return self.df["価格"].rolling(self.roll_days).apply(ma_weighted, args=(self.df,), raw=False)
+        return (
+            self.df["価格"]
+            .rolling(self.roll_days)
+            .apply(ma_weighted, args=(self.df,), raw=False).dropna()
+        )
 
-if __name__ == "__main__":
-    data = Datasets("../data/kk.csv")
-    print()
+    def train_test_split(self):
+        

@@ -2,11 +2,11 @@
 This is the script to concat 4 files per city.
 """
 
+import codecs
 import os
 from pathlib import Path
 
 import pandas as pd
-import codecs
 
 # 作業ディレクトリの定義
 root_path = Path("/home/yamashitakeisuke/Documents/strawberry/")
@@ -46,8 +46,7 @@ def parse_csv(filepath):
     with codecs.open(filepath, "r", "Shift-JIS", "ignore") as bfile:
 
         # 値の読み取り
-        df = pd.read_table(
-            bfile, delimiter=',', skiprows=6, index_col=0)
+        df = pd.read_table(bfile, delimiter=",", skiprows=6, index_col=0)
 
     with codecs.open(filepath, "r", "Shift-JIS", "ignore") as bfile:
         # 列名の読み取り
@@ -58,20 +57,21 @@ def parse_csv(filepath):
     columns = [col[:-2] for col in columns]
 
     # 県名の保存
-    file_name = set(columns[2].split(','))
+    file_name = set(columns[2].split(","))
     file_name = list(file_name)[1]
 
     # 主要ラベル
     labels_set = sorted(
-        list(set(columns[3].split(','))), key=columns[3].split(',').index)
+        list(set(columns[3].split(","))), key=columns[3].split(",").index
+    )
 
     # 補助ラベル
-    sub_labels = columns[5].split(',')
+    sub_labels = columns[5].split(",")
 
     # 全ラベルをvalueに合わせて結合
     labels = []
     for sl in sub_labels:
-        if sl == '':
+        if sl == "":
             labels.append(labels_set.pop(0))
         else:
             labels.append(sl)
@@ -110,8 +110,7 @@ def concat_files(pr_path):
 
 
 if __name__ == "__main__":
-    pr_list = [dir for dir in os.listdir(
-        data_path) if data_path.joinpath(dir).is_dir()]
+    pr_list = [dir for dir in os.listdir(data_path) if data_path.joinpath(dir).is_dir()]
 
     fnames = []
     k = 0
@@ -134,7 +133,7 @@ if __name__ == "__main__":
         except KeyError:
             print("Key Error3: ", fname, pr)
 
-        df.to_csv(data_path.joinpath(fname+".csv"))
+        df.to_csv(data_path.joinpath(fname + ".csv"))
         fnames.append(fname)
         k += 1
 
