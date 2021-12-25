@@ -23,5 +23,3 @@ if __name__ == "__main__":
         y_train_fix = d[2].iloc[:y_preds_min_len]
         y_test_fix = d[3].iloc[:y_preds_min_len]
         data_fix.append((X_train_fix, X_test_fix, y_train_fix, y_test_fix))
-
-    
