@@ -30,7 +30,15 @@ class Dataset:
     データセットの成形，train，test，データの作成
     """
 
-    def __init__(self, file_path, roll_days=5, start_test_idx=9426):
+    def __init__(
+        self,
+        file_path,
+        roll_days=5,
+        start_test_idx=9426,
+        span=7,
+        n_input=7,
+        move_days=3,
+    ):
         """
         Args:
             file_path (str): データファイルのパス
@@ -40,11 +48,15 @@ class Dataset:
         self.roll_days = roll_days
         self.start_test_idx = start_test_idx
 
+        self.span = span  # 何日分予測するか
+        self.n_input = n_input  # 何日分入力するか
+        self.move_days = move_days  # 輸送日数
+
         self.df = self.preprocess()
 
         self.ma_w = self.ma_df()
 
-        self.train_df, self.test_df = self.make_train_test()
+        self.data = self.make_train_test()
 
     def preprocess(self):
         df_raw = pd.read_csv(self.file_path)
@@ -70,7 +82,6 @@ class Dataset:
             for i in range(df.shape[0])
         ]
         df["date"] = pd.to_datetime(date)
-        # df = df.drop(date_columns, axis=1).copy()
         df["days"] = [(date - df["date"][0]).days for date in df["date"]]
         df = df.drop("date", axis=1).copy()
 
@@ -80,8 +91,62 @@ class Dataset:
         return (
             self.df["価格"]
             .rolling(self.roll_days)
-            .apply(ma_weighted, args=(self.df,), raw=False).dropna()
+            .apply(ma_weighted, args=(self.df,), raw=False)
+            .dropna()
         )
 
-    def train_test_split(self):
-        
+    def make_train_test(self):
+        df_train = self.ma_w[self.ma_w.index < self.start_test_idx].copy()
+        df_test = self.ma_w[self.ma_w.index >= self.start_test_idx].copy()
+
+        date_train_raw = self.df.loc[df_train.index, ["年", "月", "日", "曜日"]].copy()
+        date_test_raw = self.df.loc[df_test.index, ["年", "月", "日", "曜日"]].copy()
+
+        # 学習データ作成
+        # data = [4日後予測訓練データ, 5日後予測訓練データ, ..., 10日後予測訓練データ]
+
+        # 入力データから予測対象日までの最短日数 = 輸送日数 + [1,2,3,4,5,6,7,...]
+        data = []
+        for sp in range(self.span):
+
+            sp = sp + 1  # 予測日は最低move_days+1日後
+
+            n_train = df_train.shape[0] - (self.n_input - 1) - self.move_days - sp
+
+            X_train_idx = [np.arange(self.n_input) + i for i in range(n_train)]
+            y_train_idx = [
+                (self.n_input - 1) + self.move_days + sp + i for i in range(n_train)
+            ]
+
+            date_train_idx = [i + (self.n_input - 1) for i in range(n_train)]
+
+            n_test = df_test.shape[0] - (self.n_input - 1) - self.move_days - sp
+
+            X_test_idx = [np.arange(self.n_input) + i for i in range(n_test)]
+            y_test_idx = [
+                (self.n_input - 1) + self.move_days + sp + i for i in range(n_test)
+            ]
+
+            date_test_idx = [i + (self.n_input - 1) for i in range(n_test)]
+
+            X_train = np.array([df_train.iloc[xt_i].values for xt_i in X_train_idx])
+
+            y_train = np.array([df_train.iloc[yt_i] for yt_i in y_train_idx])
+
+            X_test = np.array([df_test.iloc[xt_i].values for xt_i in X_test_idx])
+            y_test = np.array([df_test.iloc[yt_i] for yt_i in y_test_idx])
+
+            X_train = pd.DataFrame(X_train, columns=np.arange(self.n_input))
+            X_test = pd.DataFrame(X_test, columns=np.arange(self.n_input))
+            y_train = pd.Series(y_train)
+            y_test = pd.Series(y_test)
+
+            date_train = date_train_raw.iloc[date_train_idx].reset_index(drop=True)
+            date_test = date_test_raw.iloc[date_test_idx].reset_index(drop=True)
+
+            X_train = pd.concat([X_train, date_train], axis=1)
+            X_test = pd.concat([X_test, date_test], axis=1)
+
+            data.append((X_train, X_test, y_train, y_test))
+
+        return data
