@@ -8,7 +8,7 @@ def root_mean_squared_error(y_pred, y_test):
     return mean_squared_error(y_pred, y_test) ** (1 / 2)
 
 
-def predict(data):
+def predict(data, show_result=True):
     y_preds = []
     for i in range(data.__len__()):
         X_train, X_test, y_train, y_test = (
@@ -18,19 +18,23 @@ def predict(data):
             data[i][3],
         )
 
-        model = lgb.LGBMRegressor(random_state=42)
+        model = lgb.LGBMRegressor(random_state=42,)
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
 
         rmse = root_mean_squared_error(y_test, y_pred)
-        print(rmse)
+
+        std = np.std(np.abs(y_test - y_pred))
 
         ape = sum(abs((y_test - y_pred) / y_test))
         mape = ape / y_test.shape[0]
-        print(mape)
+
+        if show_result:
+            print("rmse", rmse)
+            # print("std", std)
+            # print(mape)
 
         y_preds.append(y_pred)
 
     return y_preds
 
-    

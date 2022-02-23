@@ -12,6 +12,8 @@ data/zip
 
 data/amedas_data.zip
 
+data/harvest_raw.csv
+
 tk.csv
 
 .ipynb_checkpoints

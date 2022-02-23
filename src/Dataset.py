@@ -31,7 +31,13 @@ class Dataset:
     """
 
     def __init__(
-        self, file_path, roll_days=5, start_test_idx=9426, span=10, n_input=7,
+        self,
+        file_path,
+        roll_days=5,
+        start_test_idx=9426,
+        span=10,
+        n_input=7,
+        rolling=True,
     ):
         """
         Args:
@@ -147,7 +153,7 @@ class Dataset:
 
         return data
 
-    def postprocess(self, y_preds):
+    def postprocess(self, y_preds, mode="ma"):
         # モデルごとの予測データ数を揃える
         y_preds_min_len = min(list(map(len, y_preds)))
         y_preds_fix = []
@@ -156,7 +162,7 @@ class Dataset:
 
         # 予測結果に合わせて学習，テストデータを揃える
         data_fix = []
-        ma_df = self.make_train_test("ma")
+        ma_df = self.make_train_test(mode)
         for d in ma_df:
             X_train_fix = d[0].iloc[:y_preds_min_len]
             X_test_fix = d[1].iloc[:y_preds_min_len]
