@@ -20,6 +20,10 @@ notebooks/
 
 tk.csv
 
+images/
+
+results/
+
 .ipynb_checkpoints
 
 .mypy_cache
